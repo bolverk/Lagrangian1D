@@ -19,8 +19,8 @@ public:
 
 class ZeroForce : public SourceTerm
 {
-	void CalcForce(vector<double> const& /*edges*/, vector<Primitive> const& cells, double /*time*/,
-		vector<Extensive> & extensives,double /*dt*/)const
+  void CalcForce(vector<double> const& /*edges*/, vector<Primitive> const& /*cells*/, double /*time*/,
+		 vector<Extensive> & /*extensives*/,double /*dt*/)const
 	{
 		return;
 	}

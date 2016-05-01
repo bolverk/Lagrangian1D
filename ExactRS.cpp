@@ -97,7 +97,7 @@ RSsolution ExactRS::Solve(Primitive const & left, Primitive const & right)const
 		return res;
 	}
 	double value = GetValue(left, right, res.pressure, gamma_);
-	double Cs = std::max(sqrt(gamma_*left.pressure / left.density), sqrt(gamma_*right.pressure / right.density));
+	//	double Cs = std::max(sqrt(gamma_*left.pressure / left.density), sqrt(gamma_*right.pressure / right.density));
 	double dp = 0;
 	double p = res.pressure;
 	size_t counter = 0;
@@ -119,7 +119,7 @@ RSsolution ExactRS::Solve(Primitive const & left, Primitive const & right)const
 			eo.AddEntry("Right velocity", right.velocity);
 			throw eo;
 		}
-	} while ((abs(dp) > eps*(p+res.pressure))&&(dv*eps>value));
+	} while ((fabs(dp) > eps*(p+res.pressure))&&(dv*eps>value));
 	double fr = (res.pressure > right.pressure) ? CalcFshock(right, res.pressure, gamma_) : CalcFrarefraction(
 		right, res.pressure, gamma_);
 	double fl = (res.pressure > left.pressure) ? CalcFshock(left, res.pressure, gamma_) : CalcFrarefraction(

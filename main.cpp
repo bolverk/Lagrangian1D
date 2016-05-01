@@ -6,11 +6,12 @@
 #include <cassert>
 #include <boost/math/tools/roots.hpp>
 #include <float.h>
+#ifdef _MSC_VER // Checks if code is compiled by Micro$oft visual studio
 #include <Windows.h>
 
 unsigned int oldd = 0;
 unsigned int fp_control_state = _controlfp_s(&oldd,_EM_INEXACT, _MCW_EM);
-
+#endif // _MSC_VER
 
 namespace
 {
@@ -103,10 +104,10 @@ namespace
 
 	vector<double> getedges(size_t N, double L)
 	{
-		double dx = L / N;
+	  double dx = L / static_cast<double>(N);
 		vector<double> res(N + 1);
 		for (size_t i = 0; i <= N; ++i)
-			res[i] = i*dx;
+		  res[i] = static_cast<double>(i)*dx;
 		return res;
 	}
 
@@ -211,6 +212,57 @@ namespace
 		return buf;
 	}
 
+  class RawInputData
+  {
+  public:
+
+    const double beta;
+    const double star_gamma;
+    const double gas_gamma;
+    const bool self_gravity;
+    const string& output_path;
+
+    RawInputData
+    (const double& beta_i,
+     const double& star_gamma_i,
+     const double& gas_gamma_i,
+     const bool& self_gravity_i,
+     const string& output_path_i):
+      beta(beta_i),
+      star_gamma(star_gamma_i),
+      gas_gamma(gas_gamma_i),
+      self_gravity(self_gravity_i),
+      output_path(output_path_i) {}
+  };
+
+  string read_string(const string& fname)
+  {
+    string res;
+    ifstream f(fname.c_str());
+    assert(f);
+    assert(f.is_open());
+    getline(f,res);
+    f.close();
+    return res;
+  }
+
+  RawInputData read_input(const string& input_path)
+  {
+    const double beta = read_number(input_path+"/beta.txt");
+    const double star_gamma = 
+      read_number(input_path+"/star_gamma.txt");
+    const double gas_gamma =
+      read_number(input_path+"/gas_gamma.txt");
+    const double sg = read_number(input_path+"/selfgravity.txt");
+    const string output_path = read_string(input_path+"/output_dir.txt");
+    return RawInputData
+      (beta,
+       star_gamma,
+       gas_gamma,
+       sg>0.5,
+       output_path);
+  }
+
 	void ReadInput(double &beta,double &star_gamma,double &gamma,bool &selfgravity)
 	{
 		beta = read_number("c:/beta.txt");
@@ -224,14 +276,10 @@ namespace
 int main(void)
 {
 	// Units G=1 M=solar R=solar t=1.592657944577715e+03
-	bool selfgravity = false;
-	double star_gamma = 4. / 3.;
-	double gamma = 4./3.;
-	double beta = 8;
-	ReadInput(beta, star_gamma, gamma, selfgravity);
-	double cfl = 0.2;
-	ExactRS rs(gamma);
-	IdealGas eos(gamma);
+	RawInputData raw_input_data = read_input(".");
+	const double cfl = 0.2;
+	ExactRS rs(raw_input_data.gas_gamma);
+	IdealGas eos(raw_input_data.gas_gamma);
 	RigidWall bl;
 	ConstantPrimitive br(Primitive(1e-25, 1e-26, 0, eos.dp2s(1e-25, 1e-26)));
 	SeveralBoundary boundary(bl, br);
@@ -241,13 +289,23 @@ int main(void)
 	double M = 1;
 	double Mbh = 1e6;
 	double Rt = R*pow(Mbh / M, 1.0 / 3.0);
-	double Rp = Rt / beta;
-	double Nemden = 1 / (star_gamma - 1);
-	double fstart = -acos(2 / beta - 1);
-	double tstart = sqrt(2 * pow(Rt / beta, 3) / Mbh)*tan(fstart / 2)*(3 + pow(tan(fstart / 2), 2)) / 3;
+	double Rp = Rt / raw_input_data.beta;
+	double Nemden = 1 / (raw_input_data.star_gamma - 1);
+	double fstart = -acos(2 / raw_input_data.beta - 1);
+	double tstart = sqrt(2 * pow(Rt / raw_input_data.beta, 3) / 
+			     Mbh)*tan(fstart / 2)*
+	  (3 + pow(tan(fstart / 2), 2)) / 3;
 	vector<double> edges = getedges(Np, R*1.01);
-	vector<Primitive> cells = calc_init(edges, M, R, Nemden,star_gamma);
-	Gravity source(M, R, Mbh, Rp,selfgravity,star_gamma,edges);
+	vector<Primitive> cells = 
+	  calc_init(edges, M, R, Nemden,raw_input_data.star_gamma);
+	Gravity source
+	  (M, 
+	   R, 
+	   Mbh, 
+	   Rp,
+	   raw_input_data.self_gravity,
+	   raw_input_data.star_gamma,
+	   edges);
 	hdsim sim(cfl, cells, edges, interp, eos, rs,source);
 	sim.SetTime(tstart);
 
@@ -258,7 +316,9 @@ int main(void)
 	double mind = maxd;
 	int counter = 0;
 
-	while (sim.GetCells()[0].density> max(0.25*initd,0.1*maxd) && sim.GetTime()<0.6)
+	while (sim.GetCells()[0].density> 
+	       max(0.25*initd,0.1*maxd) && 
+	       sim.GetTime()<0.6)
 	{
 		if (sim.GetCycle() % 500 == 0)
 			write_snapshot_to_hdf5(sim, "c:/sim_data/temp.h5");
@@ -268,34 +328,14 @@ int main(void)
 		if (sim.GetTime() - last > dt || sim.GetCycle() == 0 || sim.GetCells()[0].density>1.02*maxd || 
 			sim.GetCells()[0].density*1.02<mind)
 		{
-			string dirloc = "c:\\TidalData";
-			CreateDirectory(dirloc.c_str(), NULL);
-			if (star_gamma > 1.6)
-				dirloc += "\\gamma53";
-			else
-				dirloc += "\\gamma43";
-			if (gamma>1.7)
-				dirloc += "\\gas2";
-			else
-				if (gamma > 1.6)
-					dirloc += "\\gas53";
-				else
-					if(gamma>1.4)
-						dirloc += "\\gas15";
-					else
-						dirloc += "\\gas43";
-			CreateDirectory(dirloc.c_str(), NULL);
-			dirloc += (selfgravity) ? "\\sg" : "\\nosg";
-			CreateDirectory(dirloc.c_str(), NULL);
-			dirloc += "\\beta";
-			dirloc += int2str(int(beta));
-			CreateDirectory(dirloc.c_str(), NULL);
-
-			write_snapshot_to_hdf5(sim,dirloc+"\\tide_" + int2str(counter) + ".h5");
-			last = sim.GetTime();
-			++counter;
-			maxd = max(maxd, sim.GetCells()[0].density);
-			mind = sim.GetCells()[0].density;
+		  write_snapshot_to_hdf5
+		    (sim,
+		     raw_input_data.output_path+"/tide_" + 
+		     int2str(counter) + ".h5");
+		  last = sim.GetTime();
+		  ++counter;
+		  maxd = max(maxd, sim.GetCells()[0].density);
+		  mind = sim.GetCells()[0].density;
 		}
 	}
 //	write_snapshot_to_hdf5(sim, "c:/sim_data/snap1d.h5");

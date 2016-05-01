@@ -94,7 +94,7 @@ void write_snapshot_to_hdf5(hdsim const& sim, string const& fname)
 			"time");
 	write_std_vector_to_hdf5
 		(file,
-			vector<int>(1, sim.GetCycle()),
+		 vector<int>(1, static_cast<int>(sim.GetCycle())),
 			"cycle");
 
 	// Geometry  
