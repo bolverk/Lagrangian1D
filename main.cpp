@@ -66,15 +66,15 @@ namespace
 		vector<double> xsi, theta, dtheta;
 		if (stargamma < 1.6)
 		{
-			xsi = read_vector("c:/xsin3.txt");
-			theta = read_vector("c:/thetan3.txt");
-			dtheta = read_vector("c:/dthetan3.txt");
+			xsi = read_vector("xsin3.txt");
+			theta = read_vector("thetan3.txt");
+			dtheta = read_vector("dthetan3.txt");
 		}
 		else
 		{
-			xsi = read_vector("c:/xsi.txt");
-			theta = read_vector("c:/theta.txt");
-			dtheta = read_vector("c:/dtheta.txt");
+			xsi = read_vector("xsi.txt");
+			theta = read_vector("theta.txt");
+			dtheta = read_vector("dtheta.txt");
 		}
 		size_t n = xsi.size();
 		double rhoc = -M*xsi[n - 1] / (4 * M_PI*R*R*R*dtheta[n - 1]);
@@ -157,13 +157,13 @@ namespace
 			vector<double> xi, dtheta;
 			if (stargamma > 1.6)
 			{
-				xi = read_vector("c:/xsi.txt");
-				dtheta = read_vector("c:/dtheta.txt");
+				xi = read_vector("xsi.txt");
+				dtheta = read_vector("dtheta.txt");
 			}
 			else
 			{
-				xi = read_vector("c:/xsin3.txt");
-				dtheta = read_vector("c:/dthetan3.txt");
+				xi = read_vector("xsin3.txt");
+				dtheta = read_vector("dthetan3.txt");
 			}
 			size_t n = xi.size();
 			rhoc_ = -M*xi[n - 1] / (4 * M_PI*R*R*R*dtheta[n - 1]);
@@ -220,7 +220,7 @@ namespace
     const double star_gamma;
     const double gas_gamma;
     const bool self_gravity;
-    const string& output_path;
+    const string output_path;
 
     RawInputData
     (const double& beta_i,
@@ -237,11 +237,11 @@ namespace
 
   string read_string(const string& fname)
   {
-    string res;
+    string res = ".";
     ifstream f(fname.c_str());
     assert(f);
     assert(f.is_open());
-    getline(f,res);
+    f >> res;
     f.close();
     return res;
   }
@@ -262,15 +262,6 @@ namespace
        sg>0.5,
        output_path);
   }
-
-	void ReadInput(double &beta,double &star_gamma,double &gamma,bool &selfgravity)
-	{
-		beta = read_number("c:/beta.txt");
-		star_gamma = read_number("c:/star_gamma.txt");
-		gamma = read_number("c:/gamma.txt");
-		double sg = read_number("c:/selfgravity.txt");
-		selfgravity = sg > 0.5;
-	}
 }
 
 int main(void)
@@ -321,7 +312,7 @@ int main(void)
 	       sim.GetTime()<0.6)
 	{
 		if (sim.GetCycle() % 500 == 0)
-			write_snapshot_to_hdf5(sim, "c:/sim_data/temp.h5");
+			write_snapshot_to_hdf5(sim, "temp.h5");
 		if (sim.GetCycle() % 100 == 0)
 			cout << "Time = " << sim.GetTime() << " Cycle = " << sim.GetCycle() << endl;
 		sim.TimeAdvance2();
@@ -338,6 +329,5 @@ int main(void)
 		  mind = sim.GetCells()[0].density;
 		}
 	}
-//	write_snapshot_to_hdf5(sim, "c:/sim_data/snap1d.h5");
 	return 0;
 }
