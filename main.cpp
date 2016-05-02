@@ -291,7 +291,26 @@ namespace
 	M_,
 	R_,
 	Nemden_,
-	rid_.star_gamma))
+	rid_.star_gamma)),
+      Mbh_(1e6),
+      Rt_(R_*pow(Mbh_/M_,1.0/3.0)),
+      Rp_(Rt_/rid_.beta),
+      source_
+      (M_,
+       R_,
+       Mbh_,
+       Rp_,
+       rid_.self_gravity,
+       rid_.star_gamma,
+       edges_),
+      sim_
+      (cfl_,
+       cells_,
+       edges_,
+       interp_,
+       eos_,
+       rs_,
+       source_)
     {}
 
     double getCFL(void) const
@@ -324,6 +343,16 @@ namespace
       return cells_;
     }
 
+    const Gravity& getSourceTerm(void) const
+    {
+      return source_;
+    }
+
+    hdsim& getSim(void)
+    {
+      return sim_;
+    }
+
   private:
     const RawInputData rid_;
     const double cfl_;
@@ -339,6 +368,11 @@ namespace
     const MinMod interp_;
     const double Nemden_;
     const vector<Primitive> cells_;
+    const double Mbh_;
+    const double Rt_;
+    const double Rp_;
+    const Gravity source_;
+    hdsim sim_;
   };
 }
 
@@ -351,27 +385,11 @@ int main(void)
 	double M = 1;
 	double Mbh = 1e6;
 	double Rt = R*pow(Mbh / M, 1.0 / 3.0);
-	double Rp = Rt / raw_input_data.beta;
 	double fstart = -acos(2 / raw_input_data.beta - 1);
 	double tstart = sqrt(2 * pow(Rt / raw_input_data.beta, 3) / 
 			     Mbh)*tan(fstart / 2)*
 	  (3 + pow(tan(fstart / 2), 2)) / 3;
-	Gravity source
-	  (M, 
-	   R, 
-	   Mbh, 
-	   Rp,
-	   raw_input_data.self_gravity,
-	   raw_input_data.star_gamma,
-	   sim_data.getEdges());
-	hdsim sim
-	  (sim_data.getCFL(),
-	   sim_data.getCells(),
-	   sim_data.getEdges(),
-	   sim_data.getInterp(),
-	   sim_data.getEOS(),
-	   sim_data.getRS(),
-	   source);
+	hdsim& sim = sim_data.getSim();
 	sim.SetTime(tstart);
 
 	double dt = 0.05;
