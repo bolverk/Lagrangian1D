@@ -283,7 +283,16 @@ namespace
 	0, 
 	eos_.dp2s(1e-25, 1e-26))),
       boundary_(bl_, br_),
-      interp_(boundary_) {}
+      interp_(boundary_),
+      Nemden_(1./rid_.star_gamma-1.0),
+      cells_
+      (calc_init
+       (edges_,
+	M_,
+	R_,
+	Nemden_,
+	rid_.star_gamma))
+    {}
 
     double getCFL(void) const
     {
@@ -310,6 +319,11 @@ namespace
       return interp_;
     }
 
+    const vector<Primitive>& getCells(void) const
+    {
+      return cells_;
+    }
+
   private:
     const RawInputData rid_;
     const double cfl_;
@@ -323,6 +337,8 @@ namespace
     const ConstantPrimitive br_;
     const SeveralBoundary boundary_;
     const MinMod interp_;
+    const double Nemden_;
+    const vector<Primitive> cells_;
   };
 }
 
@@ -336,15 +352,10 @@ int main(void)
 	double Mbh = 1e6;
 	double Rt = R*pow(Mbh / M, 1.0 / 3.0);
 	double Rp = Rt / raw_input_data.beta;
-	double Nemden = 1 / (raw_input_data.star_gamma - 1);
 	double fstart = -acos(2 / raw_input_data.beta - 1);
 	double tstart = sqrt(2 * pow(Rt / raw_input_data.beta, 3) / 
 			     Mbh)*tan(fstart / 2)*
 	  (3 + pow(tan(fstart / 2), 2)) / 3;
-	vector<Primitive> cells = 
-	  calc_init
-	  (sim_data.getEdges(), 
-	   M, R, Nemden,raw_input_data.star_gamma);
 	Gravity source
 	  (M, 
 	   R, 
@@ -355,7 +366,7 @@ int main(void)
 	   sim_data.getEdges());
 	hdsim sim
 	  (sim_data.getCFL(),
-	   cells, 
+	   sim_data.getCells(),
 	   sim_data.getEdges(),
 	   sim_data.getInterp(),
 	   sim_data.getEOS(),
@@ -364,8 +375,8 @@ int main(void)
 	sim.SetTime(tstart);
 
 	double dt = 0.05;
-	double initd = cells[0].density;
-	double maxd = cells[0].density;
+	double initd = sim_data.getCells().front().density;
+	double maxd = sim_data.getCells().front().density;
 	double last = sim.GetTime();
 	double mind = maxd;
 	int counter = 0;
