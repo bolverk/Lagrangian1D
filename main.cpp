@@ -274,7 +274,16 @@ namespace
       Np_(512),
       R_(1),
       M_(1),
-      edges_(getedges(Np_,R_*1.01)) {}
+      edges_(getedges(Np_,R_*1.01)),
+      bl_(),
+      br_
+      (Primitive
+       (1e-25, 
+	1e-26, 
+	0, 
+	eos_.dp2s(1e-25, 1e-26))),
+      boundary_(bl_, br_),
+      interp_(boundary_) {}
 
     double getCFL(void) const
     {
@@ -296,6 +305,11 @@ namespace
       return edges_;
     }
 
+    const MinMod& getInterp(void) const
+    {
+      return interp_;
+    }
+
   private:
     const RawInputData rid_;
     const double cfl_;
@@ -305,6 +319,10 @@ namespace
     const double R_;
     const double M_;
     const vector<double> edges_;
+    const RigidWall bl_;
+    const ConstantPrimitive br_;
+    const SeveralBoundary boundary_;
+    const MinMod interp_;
   };
 }
 
@@ -313,15 +331,6 @@ int main(void)
 	// Units G=1 M=solar R=solar t=1.592657944577715e+03
 	RawInputData raw_input_data = read_input(".");
 	SimData sim_data;
-	RigidWall bl;
-	ConstantPrimitive br
-	  (Primitive
-	   (1e-25, 
-	    1e-26, 
-	    0, 
-	    sim_data.getEOS().dp2s(1e-25, 1e-26)));
-	SeveralBoundary boundary(bl, br);
-	MinMod interp(boundary);
 	double R = 1;
 	double M = 1;
 	double Mbh = 1e6;
@@ -348,7 +357,7 @@ int main(void)
 	  (sim_data.getCFL(),
 	   cells, 
 	   sim_data.getEdges(),
-	   interp, 
+	   sim_data.getInterp(),
 	   sim_data.getEOS(),
 	   sim_data.getRS(),
 	   source);
