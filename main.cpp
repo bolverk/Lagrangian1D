@@ -262,13 +262,28 @@ namespace
        sg>0.5,
        output_path);
   }
+
+  class SimData
+  {
+  public:
+    SimData(void):
+      cfl_(0.2) {}
+
+    double getCFL(void) const
+    {
+      return cfl_;
+    }
+
+  private:
+    const double cfl_;
+  };
 }
 
 int main(void)
 {
 	// Units G=1 M=solar R=solar t=1.592657944577715e+03
 	RawInputData raw_input_data = read_input(".");
-	const double cfl = 0.2;
+	SimData sim_data;
 	ExactRS rs(raw_input_data.gas_gamma);
 	IdealGas eos(raw_input_data.gas_gamma);
 	RigidWall bl;
@@ -297,7 +312,9 @@ int main(void)
 	   raw_input_data.self_gravity,
 	   raw_input_data.star_gamma,
 	   edges);
-	hdsim sim(cfl, cells, edges, interp, eos, rs,source);
+	hdsim sim
+	  (sim_data.getCFL(),
+	   cells, edges, interp, eos, rs,source);
 	sim.SetTime(tstart);
 
 	double dt = 0.05;
