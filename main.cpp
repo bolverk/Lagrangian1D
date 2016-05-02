@@ -270,7 +270,11 @@ namespace
       rid_(read_input(".")),
       cfl_(0.2),
       rs_(rid_.gas_gamma),
-      eos_(rid_.gas_gamma) {}
+      eos_(rid_.gas_gamma),
+      Np_(512),
+      R_(1),
+      M_(1),
+      edges_(getedges(Np_,R_*1.01)) {}
 
     double getCFL(void) const
     {
@@ -287,11 +291,20 @@ namespace
       return eos_;
     }
 
+    const vector<double>& getEdges(void) const
+    {
+      return edges_;
+    }
+
   private:
     const RawInputData rid_;
     const double cfl_;
     const ExactRS rs_;
     const IdealGas eos_;
+    const size_t Np_;
+    const double R_;
+    const double M_;
+    const vector<double> edges_;
   };
 }
 
@@ -309,7 +322,6 @@ int main(void)
 	    sim_data.getEOS().dp2s(1e-25, 1e-26)));
 	SeveralBoundary boundary(bl, br);
 	MinMod interp(boundary);
-	size_t Np = 512;
 	double R = 1;
 	double M = 1;
 	double Mbh = 1e6;
@@ -320,9 +332,10 @@ int main(void)
 	double tstart = sqrt(2 * pow(Rt / raw_input_data.beta, 3) / 
 			     Mbh)*tan(fstart / 2)*
 	  (3 + pow(tan(fstart / 2), 2)) / 3;
-	vector<double> edges = getedges(Np, R*1.01);
 	vector<Primitive> cells = 
-	  calc_init(edges, M, R, Nemden,raw_input_data.star_gamma);
+	  calc_init
+	  (sim_data.getEdges(), 
+	   M, R, Nemden,raw_input_data.star_gamma);
 	Gravity source
 	  (M, 
 	   R, 
@@ -330,10 +343,12 @@ int main(void)
 	   Rp,
 	   raw_input_data.self_gravity,
 	   raw_input_data.star_gamma,
-	   edges);
+	   sim_data.getEdges());
 	hdsim sim
 	  (sim_data.getCFL(),
-	   cells, edges, interp, 
+	   cells, 
+	   sim_data.getEdges(),
+	   interp, 
 	   sim_data.getEOS(),
 	   sim_data.getRS(),
 	   source);
