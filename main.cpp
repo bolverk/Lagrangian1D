@@ -267,15 +267,24 @@ namespace
   {
   public:
     SimData(void):
-      cfl_(0.2) {}
+      rid_(read_input(".")),
+      cfl_(0.2),
+      rs_(rid_.gas_gamma) {}
 
     double getCFL(void) const
     {
       return cfl_;
     }
 
+    const ExactRS& getRS(void) const
+    {
+      return rs_;
+    }
+
   private:
+    const RawInputData rid_;
     const double cfl_;
+    const ExactRS rs_;
   };
 }
 
@@ -284,7 +293,6 @@ int main(void)
 	// Units G=1 M=solar R=solar t=1.592657944577715e+03
 	RawInputData raw_input_data = read_input(".");
 	SimData sim_data;
-	ExactRS rs(raw_input_data.gas_gamma);
 	IdealGas eos(raw_input_data.gas_gamma);
 	RigidWall bl;
 	ConstantPrimitive br(Primitive(1e-25, 1e-26, 0, eos.dp2s(1e-25, 1e-26)));
@@ -314,7 +322,9 @@ int main(void)
 	   edges);
 	hdsim sim
 	  (sim_data.getCFL(),
-	   cells, edges, interp, eos, rs,source);
+	   cells, edges, interp, eos,
+	   sim_data.getRS(),
+	   source);
 	sim.SetTime(tstart);
 
 	double dt = 0.05;
