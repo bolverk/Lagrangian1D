@@ -269,7 +269,8 @@ namespace
     SimData(void):
       rid_(read_input(".")),
       cfl_(0.2),
-      rs_(rid_.gas_gamma) {}
+      rs_(rid_.gas_gamma),
+      eos_(rid_.gas_gamma) {}
 
     double getCFL(void) const
     {
@@ -281,10 +282,16 @@ namespace
       return rs_;
     }
 
+    const IdealGas& getEOS(void) const
+    {
+      return eos_;
+    }
+
   private:
     const RawInputData rid_;
     const double cfl_;
     const ExactRS rs_;
+    const IdealGas eos_;
   };
 }
 
@@ -293,9 +300,13 @@ int main(void)
 	// Units G=1 M=solar R=solar t=1.592657944577715e+03
 	RawInputData raw_input_data = read_input(".");
 	SimData sim_data;
-	IdealGas eos(raw_input_data.gas_gamma);
 	RigidWall bl;
-	ConstantPrimitive br(Primitive(1e-25, 1e-26, 0, eos.dp2s(1e-25, 1e-26)));
+	ConstantPrimitive br
+	  (Primitive
+	   (1e-25, 
+	    1e-26, 
+	    0, 
+	    sim_data.getEOS().dp2s(1e-25, 1e-26)));
 	SeveralBoundary boundary(bl, br);
 	MinMod interp(boundary);
 	size_t Np = 512;
@@ -322,7 +333,8 @@ int main(void)
 	   edges);
 	hdsim sim
 	  (sim_data.getCFL(),
-	   cells, edges, interp, eos,
+	   cells, edges, interp, 
+	   sim_data.getEOS(),
 	   sim_data.getRS(),
 	   source);
 	sim.SetTime(tstart);
